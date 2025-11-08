@@ -1,5 +1,3 @@
-package main;
-
 import service.FileReaderService;
 import service.EvaluationService;
 import model.Application;
