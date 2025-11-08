@@ -1,155 +1,103 @@
 package service;
 
 import model.Application;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * EvaluationService - Başvuruları değerlendirir, sıralar ve sonuçları yazdırır
+ * EvaluationService - Başvuruları değerlendirir, sıralar ve raporlar.
  *
- * Görevler:
- * 1. Tüm başvuruları değerlendirir (evaluate())
- * 2. Başvuruları ID'ye göre sıralar
- * 3. Sonuçları formatlanmış şekilde yazdırır
+ * Bu sınıf, başvuruların iş mantığını (değerlendirme, sıralama) uygular
+ * ve sonuçları String formatında sunar. Sunum (System.out) bu sınıfta yapılmaz.
  */
 public class EvaluationService {
 
     /**
-     * Tüm başvuruları değerlendirir
-     * Her Application'ın evaluate() metodunu çağırır
+     * Verilen listedeki tüm başvuruları değerlendirir.
+     * Her Application nesnesinin kendi evaluate() metodunu çağırır.
      *
-     * @param applications - Değerlendirilecek başvurular listesi
+     * @param applications Değerlendirilecek başvuruların listesi.
      */
-    public void evaluateAll(ArrayList<Application> applications) {
+    public void evaluateAll(List<Application> applications) {
         for (Application application : applications) {
             application.evaluate();
         }
     }
 
     /**
-     * Başvuruları Applicant ID'ye göre sıralar (küçükten büyüğe)
-     * Örnek: 1101, 1102, 1114, 2201, 2205, 3301, 3312
+     * Başvuruları Applicant ID'ye göre artan sırada sıralar.
+     * (Yan etki: Metoda verilen orijinal listeyi değiştirir.)
      *
-     * @param applications - Sıralanacak başvurular listesi
+     * @param applications Sıralanacak başvurular listesi.
      */
-    public void sortByApplicantID(ArrayList<Application> applications) {
-        Collections.sort(applications, new Comparator<Application>() {
-            @Override
-            public int compare(Application app1, Application app2) {
-                // String karşılaştırma yapar
-                String id1 = app1.getApplicant().getApplicantID();
-                String id2 = app2.getApplicant().getApplicantID();
-
-                // Sayısal karşılaştırma için integer'a çevir
-                try {
-                    int numId1 = Integer.parseInt(id1);
-                    int numId2 = Integer.parseInt(id2);
-                    return Integer.compare(numId1, numId2);
-                } catch (NumberFormatException e) {
-                    // Eğer integer'a çevrilemezse string olarak karşılaştır
-                    return id1.compareTo(id2);
-                }
-            }
-        });
-    }
-
-    /**
-     * Başvuruları Applicant ID'ye göre sıralar (alternatif yöntem)
-     * Lambda expression kullanır (Java 8+)
-     *
-     * @param applications - Sıralanacak başvurular listesi
-     */
-    public void sortByApplicantIDLambda(ArrayList<Application> applications) {
+    public void sortByApplicantID(List<Application> applications) {
+        // ID'leri sayısal olarak karşılaştır, geçersiz ID varsa metin olarak karşılaştır.
         applications.sort((app1, app2) -> {
             String id1 = app1.getApplicant().getApplicantID();
             String id2 = app2.getApplicant().getApplicantID();
 
             try {
+                // ID'leri integer'a çevirerek sayısal sıralama yap
                 int numId1 = Integer.parseInt(id1);
                 int numId2 = Integer.parseInt(id2);
                 return Integer.compare(numId1, numId2);
             } catch (NumberFormatException e) {
+                // Eğer ID'ler sayı değilse, alfasayısal (string) sıralama yap
                 return id1.compareTo(id2);
             }
         });
     }
 
     /**
-     * Tüm başvuru sonuçlarını formatlanmış şekilde yazdırır
+     * Tüm başvuru sonuçlarını (Application.toString()) birleştirerek
+     * yeni satırla ayrılmış tek bir String olarak döndürür.
      *
-     * Format:
-     * - Accepted: Applicant ID: 1101, Name: Liam Smith, Scholarship: Merit, Status: Accepted, Type: Full, Duration: 2 years
-     * - Rejected: Applicant ID: 1120, Name: Oliver Brown, Scholarship: Merit, Status: Rejected, Reason: GPA below 3.0
-     *
-     * @param applications - Yazdırılacak başvurular listesi
+     * @param applications Sonuçları alınacak başvurular listesi.
+     * @return Formatlanmış sonuç String'i.
      */
-    public void printResults(ArrayList<Application> applications) {
+    public String getResultsAsString(List<Application> applications) {
+        StringBuilder sb = new StringBuilder();
         for (Application application : applications) {
-            System.out.println(application.toString());
+            sb.append(application.toString()).append("\n");
         }
+        return sb.toString();
     }
 
     /**
-     * Kabul edilen başvuruları yazdırır
-     * @param applications - Başvurular listesi
-     */
-    public void printAcceptedApplications(ArrayList<Application> applications) {
-        System.out.println("=== ACCEPTED APPLICATIONS ===");
-        for (Application application : applications) {
-            if (application.getStatus().equals("Accepted")) {
-                System.out.println(application.toString());
-            }
-        }
-    }
-
-    /**
-     * Reddedilen başvuruları yazdırır
-     * @param applications - Başvurular listesi
-     */
-    public void printRejectedApplications(ArrayList<Application> applications) {
-        System.out.println("=== REJECTED APPLICATIONS ===");
-        for (Application application : applications) {
-            if (application.getStatus().equals("Rejected")) {
-                System.out.println(application.toString());
-            }
-        }
-    }
-
-    /**
-     * İstatistikleri yazdırır
-     * - Toplam başvuru sayısı
-     * - Kabul edilen sayısı
-     * - Reddedilen sayısı
-     * - Burs türlerine göre dağılım
+     * Başvuru listesi için detaylı istatistikler oluşturur ve
+     * bunları formatlanmış bir String olarak döndürür.
      *
-     * @param applications - Başvurular listesi
+     * @param applications İstatistikleri hesaplanacak başvurular listesi.
+     * @return İstatistik raporunu içeren String.
      */
-    public void printStatistics(ArrayList<Application> applications) {
+    public String getStatisticsAsString(List<Application> applications) {
+        if (applications == null || applications.isEmpty()) {
+            return "No application data to generate statistics.";
+        }
+
         int total = applications.size();
         int accepted = 0;
-        int rejected = 0;
         int fullScholarships = 0;
         int halfScholarships = 0;
 
-        // Burs türlerine göre sayaçlar
         int meritCount = 0;
         int needBasedCount = 0;
         int researchCount = 0;
 
+        // Başvuruları tek tek analiz et
         for (Application app : applications) {
             if (app.getStatus().equals("Accepted")) {
                 accepted++;
-                if (app.getScholarshipType().equals("Full")) {
-                    fullScholarships++;
-                } else {
-                    halfScholarships++;
+                if (app.getScholarshipType() != null) {
+                    if (app.getScholarshipType().equals("Full")) {
+                        fullScholarships++;
+                    } else if (app.getScholarshipType().equals("Half")) {
+                        halfScholarships++;
+                    }
                 }
-            } else {
-                rejected++;
             }
 
-            // Burs türünü say
+            // Başvuru türünü say
             String scholarshipName = app.getScholarshipName();
             if (scholarshipName.equals("Merit")) {
                 meritCount++;
@@ -160,50 +108,56 @@ public class EvaluationService {
             }
         }
 
-        System.out.println("\n=== STATISTICS ===");
-        System.out.println("Total Applications: " + total);
-        System.out.println("Accepted: " + accepted + " (" + String.format("%.1f", (accepted * 100.0 / total)) + "%)");
-        System.out.println("Rejected: " + rejected + " (" + String.format("%.1f", (rejected * 100.0 / total)) + "%)");
-        System.out.println("\nScholarship Types:");
-        System.out.println("  Full Scholarships: " + fullScholarships);
-        System.out.println("  Half Scholarships: " + halfScholarships);
-        System.out.println("\nApplication Distribution:");
-        System.out.println("  Merit-Based: " + meritCount);
-        System.out.println("  Need-Based: " + needBasedCount);
-        System.out.println("  Research Grant: " + researchCount);
+        int rejected = total - accepted;
+
+        // İstatistik raporunu StringBuilder ile oluştur
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n=== STATISTICS ===\n");
+        sb.append("Total Applications: ").append(total).append("\n");
+        sb.append("Accepted: ").append(accepted).append(" (").append(String.format("%.1f", (accepted * 100.0 / total))).append("%)\n");
+        sb.append("Rejected: ").append(rejected).append(" (").append(String.format("%.1f", (rejected * 100.0 / total))).append("%)\n");
+        sb.append("\nScholarship Types:\n");
+        sb.append("  Full Scholarships: ").append(fullScholarships).append("\n");
+        sb.append("  Half Scholarships: ").append(halfScholarships).append("\n");
+        sb.append("\nApplication Distribution:\n");
+        sb.append("  Merit-Based: ").append(meritCount).append("\n");
+        sb.append("  Need-Based: ").append(needBasedCount).append("\n");
+        sb.append("  Research Grant: ").append(researchCount).append("\n");
+
+        return sb.toString();
     }
 
     /**
-     * Belirli bir burs türünün başvurularını filtreler
-     * @param applications - Tüm başvurular
-     * @param scholarshipName - Filtre ("Merit", "Need-Based", "Research")
-     * @return Filtrelenmiş liste
+     * Başvuruları burs türüne göre (Merit, Need-Based, Research) filtreler.
+     * Orijinal listeyi değiştirmez, yeni bir liste döndürür.
+     *
+     * @param applications    Tüm başvuruların listesi.
+     * @param scholarshipName Filtrelenecek burs adı (örn: "Merit").
+     * @return Sadece belirtilen burs türüne ait başvuruları içeren yeni bir liste.
      */
-    public ArrayList<Application> filterByScholarshipType(
-            ArrayList<Application> applications, String scholarshipName) {
-        ArrayList<Application> filtered = new ArrayList<>();
-        for (Application app : applications) {
-            if (app.getScholarshipName().equals(scholarshipName)) {
-                filtered.add(app);
-            }
-        }
-        return filtered;
+    public List<Application> filterByScholarshipType(
+            List<Application> applications, String scholarshipName) {
+
+        // Stream API kullanarak listeyi filtrele
+        return applications.stream()
+                .filter(app -> app.getScholarshipName().equals(scholarshipName))
+                .collect(Collectors.toList());
     }
 
     /**
-     * Belirli bir duruma göre başvuruları filtreler
-     * @param applications - Tüm başvurular
-     * @param status - Filtre ("Accepted" veya "Rejected")
-     * @return Filtrelenmiş liste
+     * Başvuruları durumuna göre (Accepted, Rejected) filtreler.
+     * Orijinal listeyi değiştirmez, yeni bir liste döndürür.
+     *
+     * @param applications Tüm başvuruların listesi.
+     * @param status       Filtrelenecek durum (örn: "Accepted").
+     * @return Sadece belirtilen duruma sahip başvuruları içeren yeni bir liste.
      */
-    public ArrayList<Application> filterByStatus(
-            ArrayList<Application> applications, String status) {
-        ArrayList<Application> filtered = new ArrayList<>();
-        for (Application app : applications) {
-            if (app.getStatus().equals(status)) {
-                filtered.add(app);
-            }
-        }
-        return filtered;
+    public List<Application> filterByStatus(
+            List<Application> applications, String status) {
+
+        // Stream API kullanarak listeyi filtrele
+        return applications.stream()
+                .filter(app -> app.getStatus().equals(status))
+                .collect(Collectors.toList());
     }
 }
