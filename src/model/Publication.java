@@ -32,6 +32,16 @@ public class Publication {
         this.impactFactor = impactFactor;
     }
 
+    // Copy Constructor
+    public Publication(Publication other) {
+        if (other == null) {
+            throw new IllegalArgumentException("Cannot copy from null Publication");
+        }
+        this.applicantID = other.applicantID;
+        this.title = other.title;
+        this.impactFactor = other.impactFactor;
+    }
+
     // Getters
     public String getApplicantID() {
         return applicantID;
