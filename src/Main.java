@@ -3,41 +3,20 @@ import service.EvaluationService;
 import model.Application;
 import java.util.ArrayList;
 
-/**
- * Main - Program giriş noktası
- *
- * Bu sınıf Scholarship Evaluation System'i başlatır ve çalıştırır.
- *
- * İş Akışı:
- * 1. CSV dosyasını okur
- * 2. Application nesnelerini oluşturur
- * 3. Tüm başvuruları değerlendirir
- * 4. Sonuçları ID'ye göre sıralar
- * 5. Formatlanmış çıktı üretir
- *
- * @author [Your Name]
- * @version 1.0
- * @since 2025-11-16
- */
 public class Main {
 
-    // CSV dosyasının yolu (göreceli yol kullanılmalı!)
+
     private static final String CSV_FILE_PATH = "Files/ScholarshipApplications.csv";
 
-    // Debug modu (detaylı çıktı için)
     private static final boolean DEBUG_MODE = false;
 
-    /**
-     * Program giriş noktası
-     * @param args - Komut satırı argümanları (kullanılmıyor)
-     */
     public static void main(String[] args) {
 
         // Başlangıç mesajı
         printWelcomeMessage();
 
         try {
-            // ============ ADIM 1: CSV DOSYASINI OKU ============
+            // Read CSV Files
             if (DEBUG_MODE) {
                 System.out.println("\n[DEBUG] Reading CSV file: " + CSV_FILE_PATH);
             }
