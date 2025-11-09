@@ -1,41 +1,15 @@
 package enums;
 
-/**
- ScholarshipStatus - Burs durumunu temsil eden enum
-
- İki ana durum vardır:
- - FULL: Full Scholarship (Tam Burs)
- - HALF: Half Scholarship (Yarım Burs)
-
- Not: "Rejected" durumu için ayrı bir ApplicationStatus enum'u kullanılabilir
- veya status String olarak "Accepted"/"Rejected" şeklinde tutulabilir
- */
 public enum ScholarshipStatus {
 
-    /**
-     FULL - Full Scholarship (Tam Burs)
-
-     Kriterler:
-     - Merit: GPA >= 3.20
-     - Need-Based: Gelir <= 10,000 (adjusted)
-     - Research: Avg Impact Factor >= 1.50
-     */
     FULL("Full", "Full Scholarship", 100),
 
-    /**
-      HALF - Half Scholarship (Yarım Burs)
-
-      Kriterler:
-      - Merit: 3.00 <= GPA < 3.20
-      - Need-Based: 10,000 < Gelir <= 15,000 (adjusted)
-      - Research: 1.00 <= Avg Impact Factor < 1.50
-     */
     HALF("Half", "Half Scholarship", 50);
 
-    // Enum özellikleri
-    private final String displayName;       // Kısa isim (Full, Half)
-    private final String fullName;          // Tam isim
-    private final int percentage;           // Burs yüzdesi (100%, 50%)
+    // Enum properties
+    private final String displayName;
+    private final String fullName;
+    private final int percentage;
 
     // Constructor
     ScholarshipStatus(String displayName, String fullName, int percentage) {
@@ -58,12 +32,16 @@ public enum ScholarshipStatus {
     }
 
     /**
-     Display name'den ScholarshipStatus enum'una dönüşüm
-     @param displayName - Display ismi (Full, Half)
-     @return ScholarshipStatus enum değeri
-     @throws IllegalArgumentException - Geçersiz isim
+     Conversion from display name to ScholarshipStatus enum
+     @param displayName - Display name (Full, Half)
+     @return ScholarshipStatus enum value
+     @throws IllegalArgumentException - Invalid name
      */
     public static ScholarshipStatus fromDisplayName(String displayName) {
+        if (displayName == null || displayName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Display name cannot be null or empty");
+        }
+
         for (ScholarshipStatus status : ScholarshipStatus.values()) {
             if (status.displayName.equalsIgnoreCase(displayName.trim())) {
                 return status;
@@ -73,10 +51,10 @@ public enum ScholarshipStatus {
     }
 
     /**
-     Yüzde değerinden ScholarshipStatus enum'una dönüşüm
-     @param percentage - Burs yüzdesi (100 veya 50)
-     @return ScholarshipStatus enum değeri
-     @throws IllegalArgumentException - Geçersiz yüzde
+     Conversion from percentage value to Scholarship Status enum
+     @param percentage - Scholarship percentage (100 or 50)
+     @return ScholarshipStatus enum Value
+     @throws IllegalArgumentException - Invalid percentage
      */
     public static ScholarshipStatus fromPercentage(int percentage) {
         for (ScholarshipStatus status : ScholarshipStatus.values()) {
@@ -88,11 +66,14 @@ public enum ScholarshipStatus {
     }
 
     /**
-     Belirli bir display name'in geçerli olup olmadığını kontrol eder
-     @param displayName - Kontrol edilecek isim
-     @return true ise geçerli
+     Checks if a given display name is valid
+     @param displayName - Name to check
+     @return valid if true
      */
     public static boolean isValidDisplayName(String displayName) {
+        if (displayName == null || displayName.trim().isEmpty()) {
+            return false;
+        }
         try {
             fromDisplayName(displayName);
             return true;
@@ -101,42 +82,33 @@ public enum ScholarshipStatus {
         }
     }
 
-    /**
-     Full scholarship olup olmadığını kontrol eder
-     @return true ise Full scholarship
-     */
+    //Checks whether there is a full scholarship
     public boolean isFull() {
         return this == FULL;
     }
 
-    /**
-     Half scholarship olup olmadığını kontrol eder
-     @return true ise Half scholarship
-     */
+    //Checks whether there is a half scholarship
     public boolean isHalf() {
         return this == HALF;
     }
 
     /**
-     Burs miktarını hesaplar (varsayılan burs miktarına göre)
-     @param baseAmount - Tam burs miktarı
-     @return Hesaplanmış burs miktarı
+     Calculates the scholarship amount (based on the default scholarship amount)
+     @param baseAmount - Full scholarship amount
+     @return Calculated scholarship amount
      */
     public double calculateAmount(double baseAmount) {
         return baseAmount * (percentage / 100.0);
     }
 
     /**
-     Tüm burs durumlarını listeler
-     @return Tüm ScholarshipStatus değerleri
+     Lists all scholarship statuses
+     @return All Scholarship Status values
      */
     public static ScholarshipStatus[] getAllStatuses() {
         return ScholarshipStatus.values();
     }
 
-    /**
-     String gösterimi
-     */
     @Override
     public String toString() {
         return displayName + " (" + percentage + "%)";
