@@ -1,56 +1,80 @@
 package model;
 
+import java.util.Objects; // equals/hashCode için
+
+/**
+ * Publication Sınıfı
+ * * Bir yayının bilgilerini (ID, başlık, impact factor) saklayan
+ * basit bir veri modelidir (POJO).
+ */
 public class Publication {
 
-    // Fields
+    // Alanlar (Fields)
     private String applicantID;
     private String title;
     private double impactFactor;
 
-    // Creates Publication object
+    /**
+     * Ana Yapıcı Metot (Primary Constructor).
+     * Yeni bir Publication nesnesi oluşturur.
+     *
+     * @param applicantID  Başvuranın ID'si
+     * @param title        Yayının başlığı
+     * @param impactFactor Yayının etki faktörü
+     */
     public Publication(String applicantID, String title, double impactFactor) {
+        // Validation (doğrulama) eklenebilir, örn: impactFactor < 0 olamaz
         this.applicantID = applicantID;
         this.title = title;
         this.impactFactor = impactFactor;
     }
 
-    // Copy Constructor
+    /**
+     * Kopya Yapıcı Metot (Copy Constructor).
+     * Varolan bir Publication nesnesinin kopyasını oluşturur.
+     *
+     * @param other Kopyalanacak diğer Publication nesnesi.
+     */
     public Publication(Publication other) {
         if (other == null) {
-            throw new IllegalArgumentException("Cannot copy from null Publication");
+            throw new IllegalArgumentException("Cannot copy from a null Publication object");
         }
         this.applicantID = other.applicantID;
         this.title = other.title;
         this.impactFactor = other.impactFactor;
     }
 
-    // Getters
+    // --- Getters ---
+
+    /**
+     * @return Başvuranın ID'si
+     */
     public String getApplicantID() {
         return applicantID;
     }
 
+    /**
+     * @return Yayının başlığı
+     */
     public String getTitle() {
         return title;
     }
 
+    /**
+     * ResearchGrant sınıfının ortalama hesaplamak için kullandığı ana metot.
+     * @return Yayının etki faktörü
+     */
     public double getImpactFactor() {
         return impactFactor;
     }
 
-    // Setters
-    public void setApplicantID(String applicantID) {
-        this.applicantID = applicantID;
-    }
+    // --- Yardımcı Metotlar ---
 
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public void setImpactFactor(double impactFactor) {
-        this.impactFactor = impactFactor;
-    }
-
-    // Returns Impact Category based on Impact Factor
+    /**
+     * Etki faktörüne göre yayının kategorisini döndürür.
+     *
+     * @return "High Impact", "Medium Impact", veya "Low Impact"
+     */
     public String getImpactCategory() {
         if (impactFactor >= 1.50) {
             return "High Impact";
@@ -61,19 +85,37 @@ public class Publication {
         }
     }
 
-    // Checks if publication is qualified for full scholarship
-    public boolean qualifiesForFullScholarship() {
-        return impactFactor >= 1.50;
+    // --- Object Metotları (equals/hashCode) ---
+
+    /**
+     * İki Publication nesnesinin eşitliğini kontrol eder.
+     * Eşitlik, 'applicantID' ve 'title' alanlarına göre belirlenir.
+     *
+     * @param object Karşılaştırılacak nesne
+     * @return Eğer nesneler eşitse true, değilse false
+     */
+    @Override
+    public boolean equals(Object object) {
+        // 1. Aynı referans mı diye bak
+        if (this == object) return true;
+        // 2. Null mı veya farklı sınıf mı diye bak
+        if (object == null || getClass() != object.getClass()) return false;
+
+        // 3. Alanları karşılaştır
+        Publication that = (Publication) object;
+        return Objects.equals(applicantID, that.applicantID) &&
+                Objects.equals(title, that.title);
     }
 
-    // Checks if publication is qualified for half scholarship
-    public boolean qualifiesForHalfScholarship() {
-        return impactFactor >= 1.00;
-    }
-
-    // Checks if publication is acceptable
-    public boolean isAcceptable() {
-        return impactFactor >= 1.00;
+    /**
+     * equals() metoduyla tutarlı bir hash code üretir.
+     *
+     * @return Bu nesne için üretilen hash kodu
+     */
+    @Override
+    public int hashCode() {
+        // Eşitlik kontrolünde kullanılan alanları hash'e dahil et
+        return Objects.hash(applicantID, title);
     }
 
     @Override
@@ -84,27 +126,5 @@ public class Publication {
                 ", impactFactor=" + impactFactor +
                 " (" + getImpactCategory() + ")" +
                 '}';
-    }
-
-    // Compares 2 publication based on Applicant ID and Title
-    @Override
-    public boolean equals(Object object) {
-        if (this == object) return true;
-        if (object == null || getClass() != object.getClass()) return false;
-
-        Publication that = (Publication) object;
-        return applicantID.equals(that.applicantID) &&
-                title.equals(that.title);
-    }
-
-    // Creates Hash code
-    @Override
-    public int hashCode() {
-        return applicantID.hashCode() + title.hashCode();
-    }
-
-    // Compares 2 publication based on Impact Factor
-    public int compareByImpact(Publication other) {
-        return Double.compare(this.impactFactor, other.impactFactor);
     }
 }

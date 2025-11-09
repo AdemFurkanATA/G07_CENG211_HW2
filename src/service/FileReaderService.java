@@ -1,229 +1,194 @@
 package service;
 
-import model.*;
+import model.*; // model paketindeki tüm sınıfları import et
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List; // ArrayList yerine List arayüzünü kullanmak daha iyidir
 
 /**
- * FileReaderService - CSV dosyasını okur ve Application nesneleri oluşturur
+ * FileReaderService - CSV dosyasını okur ve Application nesneleri oluşturur.
  *
- * İşlem Adımları:
- * 1. CSV dosyasını satır satır okur
- * 2. Her satırı parse eder (A, T, I, D, P)
- * 3. Verileri applicant ID'ye göre gruplar
- * 4. Her başvuran için uygun Application nesnesini oluşturur
- * 5. Belgeleri, yayınları ve diğer bilgileri ekler
+ * Bu servis, CSV dosyasını iki aşamalı (two-pass) bir okuma stratejisi
+ * kullanarak işler:
+ * 1. Geçiş (Pass 1): Sadece 'A' (Applicant) satırlarını okur,
+ * Application nesnelerini (Merit, Need, Research) oluşturur ve
+ * bir HashMap'e ID'leriyle birlikte depolar.
+ * 2. Geçiş (Pass 2): Diğer tüm satırları (T, I, D, P) okur ve
+ * HashMap'te bulunan ilgili Application nesnelerini günceller.
  */
 public class FileReaderService {
 
     /**
-     * CSV dosyasını okur ve Application listesi döndürür
-     * @param filePath - CSV dosyasının yolu (örn: "Files/ScholarshipApplications.csv")
-     * @return Application nesnelerinin listesi
-     * @throws IOException - Dosya okuma hatası
+     * CSV dosyasını okur, parse eder ve Application nesnelerinden oluşan
+     * bir ArrayList döndürür.
+     *
+     * @param filePath Okunacak CSV dosyasının yolu (örn: "Files/ScholarshipApplications.csv")
+     * @return Doldurulmuş ve değerlendirilmeye hazır Application nesnelerinin listesi
+     * @throws IOException Dosya okuma sırasında bir hata oluşursa
      */
     public ArrayList<Application> readAndParseApplications(String filePath) throws IOException {
-        // 1. Verileri saklamak için map'ler oluştur
-        Map<String, Applicant> applicants = new HashMap<>();
-        Map<String, TranscriptInfo> transcripts = new HashMap<>();
-        Map<String, ArrayList<Document>> documents = new HashMap<>();
-        Map<String, ArrayList<Publication>> publications = new HashMap<>();
-        Map<String, FamilyInfo> familyInfos = new HashMap<>();
 
-        // 2. CSV dosyasını oku
-        BufferedReader reader = new BufferedReader(new FileReader(filePath));
-        String line;
+        // Tüm başvuruları ID'ye göre hızlı erişim için saklayan ana Map
+        Map<String, Application> applicationMap = new HashMap<>();
 
-        while ((line = reader.readLine()) != null) {
-            // Boş satırları atla
-            if (line.trim().isEmpty()) {
-                continue;
+        // --- 1. GEÇİŞ: Başvuranları (Applicant) Oluştur ---
+        // try-with-resources bloğu, 'reader' nesnesinin otomatik kapanmasını sağlar
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.trim().isEmpty()) {
+                    continue; // Boş satırları atla
+                }
+
+                String[] data = line.split(",");
+                String prefix = data[0].trim();
+
+                // Sadece 'A' satırlarıyla ilgilen
+                if (prefix.equals("A")) {
+                    parseAndCreateApplicant(data, applicationMap);
+                }
             }
+        } // 'reader' burada otomatik olarak reader.close() çağrılır
 
-            // Satırı parse et
-            String[] data = line.split(",");
+        // --- 2. GEÇİŞ: Başvuruları Detaylarla (T, I, D, P) Güncelle ---
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.trim().isEmpty()) {
+                    continue; // Boş satırları atla
+                }
 
-            // Prefix'e göre işle
-            String prefix = data[0].trim();
+                String[] data = line.split(",");
+                String prefix = data[0].trim();
 
-            switch (prefix) {
-                case "A":
-                    // Applicant bilgisi
-                    parseApplicantInfo(data, applicants);
-                    break;
+                // 'A' satırı olmayanlar için de ID'yi al (data[1])
+                String applicantID = data[1].trim();
 
-                case "T":
-                    // Transcript bilgisi
-                    parseTranscriptInfo(data, transcripts);
-                    break;
+                // Map'ten ilgili başvuruyu al
+                Application app = applicationMap.get(applicantID);
 
-                case "I":
-                    // Family Info
-                    parseFamilyInfo(data, familyInfos);
-                    break;
+                // Eğer map'te bu ID'ye ait bir 'A' kaydı yoksa (hatalı veri),
+                // bu satırı işlemeden atla.
+                if (app == null) {
+                    continue;
+                }
 
-                case "D":
-                    // Document
-                    parseDocument(data, documents);
-                    break;
-
-                case "P":
-                    // Publication
-                    parsePublication(data, publications);
-                    break;
+                // Satır tipine göre ilgili güncelleme metodunu çağır
+                switch (prefix) {
+                    case "A":
+                        // 'A' satırları 1. geçişte halledildi, tekrar işleme
+                        break;
+                    case "T":
+                        parseTranscriptInfo(data, app);
+                        break;
+                    case "I":
+                        parseFamilyInfo(data, app);
+                        break;
+                    case "D":
+                        parseDocument(data, app);
+                        break;
+                    case "P":
+                        parsePublication(data, app);
+                        break;
+                }
             }
-        }
+        } // 'reader' burada da otomatik olarak reader.close() çağrılır
 
-        reader.close();
-
-        // 3. Application nesnelerini oluştur
-        ArrayList<Application> applications = createApplications(
-                applicants, transcripts, documents, publications, familyInfos
-        );
-
-        return applications;
+        // Map'teki tüm Application objelerini (values) yeni bir ArrayList'e
+        // kopyala ve bu listeyi döndür.
+        return new ArrayList<>(applicationMap.values());
     }
 
     /**
-     * Applicant satırını parse eder
+     * 'A' (Applicant) satırını parse eder, bir Applicant ve bir Application
+     * nesnesi oluşturur ve bunları map'e ekler.
      * Format: A, applicantID, name, GPA, income
      */
-    private void parseApplicantInfo(String[] data, Map<String, Applicant> applicants) {
+    private void parseAndCreateApplicant(String[] data, Map<String, Application> map) {
         String applicantID = data[1].trim();
         String name = data[2].trim();
         double gpa = Double.parseDouble(data[3].trim());
         double income = Double.parseDouble(data[4].trim());
 
+        // 1. Applicant (veri) nesnesini oluştur
         Applicant applicant = new Applicant(applicantID, name, gpa, income);
-        applicants.put(applicantID, applicant);
+
+        // 2. ID'ye göre doğru Application (iş mantığı) nesnesini oluştur (Factory metodu)
+        Application application = createApplicationByType(applicant);
+
+        // 3. Oluşturulan başvuruyu map'e ekle
+        map.put(applicantID, application);
     }
 
     /**
-     * Transcript satırını parse eder
+     * 'T' (Transcript) satırını parse eder ve varolan Application nesnesini günceller.
      * Format: T, applicantID, transcriptStatus (Y/N)
      */
-    private void parseTranscriptInfo(String[] data, Map<String, TranscriptInfo> transcripts) {
-        String applicantID = data[1].trim();
+    private void parseTranscriptInfo(String[] data, Application app) {
         String status = data[2].trim();
-
-        TranscriptInfo transcript = new TranscriptInfo(applicantID, status);
-        transcripts.put(applicantID, transcript);
+        app.setTranscriptStatus(status.equalsIgnoreCase("Y")); // "Y" veya "y" ise true
     }
 
     /**
-     * Family Info satırını parse eder
+     * 'I' (Family Info) satırını parse eder ve varolan Application nesnesini günceller.
      * Format: I, applicantID, familyIncome, dependents
      */
-    private void parseFamilyInfo(String[] data, Map<String, FamilyInfo> familyInfos) {
-        String applicantID = data[1].trim();
-        double familyIncome = Double.parseDouble(data[2].trim());
-        int dependents = Integer.parseInt(data[3].trim());
+    private void parseFamilyInfo(String[] data, Application app) {
+        // Bu bilgi sadece NeedBasedScholarship ile ilgilidir
+        if (app instanceof NeedBasedScholarship) {
+            double familyIncome = Double.parseDouble(data[2].trim());
+            int dependents = Integer.parseInt(data[3].trim());
 
-        FamilyInfo familyInfo = new FamilyInfo(familyIncome, dependents);
-        familyInfos.put(applicantID, familyInfo);
+            // 'app' referansını NeedBasedScholarship'e cast et (tür dönüştür)
+            // ve ilgili metodu çağır
+            ((NeedBasedScholarship) app).setFamilyInfo(familyIncome, dependents);
+        }
     }
 
     /**
-     * Document satırını parse eder
+     * 'D' (Document) satırını parse eder, bir Document nesnesi oluşturur
+     * ve bunu varolan Application nesnesine ekler.
      * Format: D, applicantID, documentType, durationInMonths
      */
-    private void parseDocument(String[] data, Map<String, ArrayList<Document>> documents) {
-        String applicantID = data[1].trim();
+    private void parseDocument(String[] data, Application app) {
         String documentType = data[2].trim();
         int duration = Integer.parseInt(data[3].trim());
 
-        Document document = new Document(applicantID, documentType, duration);
+        // ID'yi Application'ın içindeki Applicant'ten al (veri tutarlılığı)
+        String applicantID = app.getApplicant().getApplicantID();
 
-        // ArrayList'e ekle (varsa ekle, yoksa yeni oluştur)
-        documents.computeIfAbsent(applicantID, k -> new ArrayList<>()).add(document);
+        Document document = new Document(applicantID, documentType, duration);
+        app.addDocument(document); // Application'daki listeye ekle
     }
 
     /**
-     * Publication satırını parse eder
+     * 'P' (Publication) satırını parse eder, bir Publication nesnesi oluşturur
+     * ve bunu varolan Application nesnesine ekler.
      * Format: P, applicantID, title, impactFactor
      */
-    private void parsePublication(String[] data, Map<String, ArrayList<Publication>> publications) {
-        String applicantID = data[1].trim();
+    private void parsePublication(String[] data, Application app) {
         String title = data[2].trim();
         double impactFactor = Double.parseDouble(data[3].trim());
 
+        String applicantID = app.getApplicant().getApplicantID();
+
         Publication publication = new Publication(applicantID, title, impactFactor);
-
-        // ArrayList'e ekle
-        publications.computeIfAbsent(applicantID, k -> new ArrayList<>()).add(publication);
+        app.addPublication(publication); // Application'daki listeye ekle
     }
 
     /**
-     * Tüm verileri birleştirerek Application nesneleri oluşturur
-     */
-    private ArrayList<Application> createApplications(
-            Map<String, Applicant> applicants,
-            Map<String, TranscriptInfo> transcripts,
-            Map<String, ArrayList<Document>> documents,
-            Map<String, ArrayList<Publication>> publications,
-            Map<String, FamilyInfo> familyInfos) {
-
-        ArrayList<Application> applications = new ArrayList<>();
-
-        // Her başvuran için Application oluştur
-        for (Map.Entry<String, Applicant> entry : applicants.entrySet()) {
-            String applicantID = entry.getKey();
-            Applicant applicant = entry.getValue();
-
-            // ID'ye göre burs türünü belirle
-            Application application = createApplicationByType(applicant);
-
-            // Transcript bilgisini ekle
-            TranscriptInfo transcript = transcripts.get(applicantID);
-            if (transcript != null) {
-                application.setTranscriptStatus(transcript.isValid());
-            }
-
-            // Belgeleri ekle
-            ArrayList<Document> docs = documents.get(applicantID);
-            if (docs != null) {
-                for (Document doc : docs) {
-                    application.addDocument(doc);
-                }
-            }
-
-            // Yayınları ekle (Research grant için)
-            ArrayList<Publication> pubs = publications.get(applicantID);
-            if (pubs != null) {
-                for (Publication pub : pubs) {
-                    application.addPublication(pub);
-                }
-            }
-
-            // Aile bilgilerini ekle (Need-based için)
-            if (application instanceof NeedBasedScholarship) {
-                FamilyInfo familyInfo = familyInfos.get(applicantID);
-                if (familyInfo != null) {
-                    ((NeedBasedScholarship) application).setFamilyInfo(
-                            familyInfo.getFamilyIncome(),
-                            familyInfo.getDependents()
-                    );
-                }
-            }
-
-            applications.add(application);
-        }
-
-        return applications;
-    }
-
-    /**
-     * Applicant ID'sine göre uygun Application türünü oluşturur
-     * 11xx → MeritBasedScholarship
-     * 22xx → NeedBasedScholarship
-     * 33xx → ResearchGrant
+     * Applicant ID'sine göre uygun Application alt sınıfını (Merit, Need, Research)
+     * oluşturan bir factory metodu.
+     *
+     * @param applicant Applicant (veri) nesnesi
+     * @return Uygun Application (iş mantığı) nesnesi
      */
     private Application createApplicationByType(Applicant applicant) {
-        String typeCode = applicant.getScholarshipTypeCode();
+        String typeCode = applicant.getScholarshipTypeCode(); // "11", "22", veya "33"
 
         switch (typeCode) {
             case "11":
@@ -233,28 +198,9 @@ public class FileReaderService {
             case "33":
                 return new ResearchGrant(applicant);
             default:
-                throw new IllegalArgumentException("Unknown scholarship type: " + typeCode);
-        }
-    }
-
-    /**
-     * FamilyInfo - İç sınıf, aile bilgilerini geçici olarak tutar
-     */
-    private static class FamilyInfo {
-        private double familyIncome;
-        private int dependents;
-
-        public FamilyInfo(double familyIncome, int dependents) {
-            this.familyIncome = familyIncome;
-            this.dependents = dependents;
-        }
-
-        public double getFamilyIncome() {
-            return familyIncome;
-        }
-
-        public int getDependents() {
-            return dependents;
+                // CSV'de "11", "22", "33" dışında bir prefix varsa
+                // programın durması için bir exception fırlat.
+                throw new IllegalArgumentException("Unknown scholarship type code: " + typeCode);
         }
     }
 }

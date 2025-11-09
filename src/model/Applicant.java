@@ -1,104 +1,112 @@
 package model;
 
+import java.util.Objects; // equals/hashCode için
+
+/**
+ * Applicant Sınıfı
+ * Bir başvuru sahibine ait temel bilgileri (ID, isim, GPA, gelir) tutan
+ * basit bir veri modelidir (POJO).
+ * ID (applicantID) 'final' yani değişmezdir.
+ */
 public class Applicant {
 
+    // Alanlar
     private final String applicantID;  // ID değiştirilemez (immutable)
     private String name;
     private double gpa;
     private double income;
 
+    // Sabitler
     private static final double MIN_GPA = 0.0;
     private static final double MAX_GPA = 4.0;
     private static final double MIN_INCOME = 0.0;
-    private static final double MINIMUM_ELIGIBILITY_GPA = 2.50;
 
-
+    /**
+     * Ana Yapıcı Metot (Constructor).
+     * Gelen verilerle yeni bir Applicant nesnesi oluşturur ve verileri doğrular.
+     */
     public Applicant(String applicantID, String name, double gpa, double income) {
+        // Validasyon (Doğrulama)
         validateApplicantID(applicantID);
         validateName(name);
         validateGpa(gpa);
         validateIncome(income);
 
+        // Değerleri ata (trim ile temizle)
         this.applicantID = applicantID.trim();
         this.name = name.trim();
         this.gpa = gpa;
         this.income = income;
     }
 
+    /**
+     * Kopya Yapıcı Metot (Copy Constructor).
+     * Varolan bir Applicant nesnesinin kopyasını oluşturur.
+     */
     public Applicant(Applicant other) {
-        if (other == null) {
-            throw new IllegalArgumentException("Cannot copy from null Applicant");
-        }
+        Objects.requireNonNull(other, "Cannot copy from a null Applicant");
 
+        // Alanlar immutable (String) veya primitif (double) olduğu için
+        // direkt kopyalama (shallow copy) yeterli ve güvenlidir.
         this.applicantID = other.applicantID;
         this.name = other.name;
         this.gpa = other.gpa;
         this.income = other.income;
     }
 
+    // --- Validasyon Metotları ---
+
+    /**
+     * Applicant ID'sinin formatını doğrular (null, boş, prefix, numeric).
+     */
     private void validateApplicantID(String applicantID) {
-        if (applicantID == null) {
-            throw new IllegalArgumentException("Applicant ID cannot be null");
-        }
-
+        Objects.requireNonNull(applicantID, "Applicant ID cannot be null");
         String trimmedID = applicantID.trim();
-
         if (trimmedID.isEmpty()) {
             throw new IllegalArgumentException("Applicant ID cannot be empty");
         }
 
-        if (trimmedID.length() < 4) {
-            throw new IllegalArgumentException("Applicant ID must be at least 4 characters");
-        }
-
+        // PDF'teki 3 tip (11, 22, 33) dışında prefix var mı?
         String prefix = trimmedID.substring(0, 2);
         if (!prefix.equals("11") && !prefix.equals("22") && !prefix.equals("33")) {
             throw new IllegalArgumentException("Invalid Applicant ID prefix. Must start with 11, 22, or 33");
         }
 
+        // ID'nin tamamı sayı mı?
         try {
+            // ID'ler 8 haneli, Integer'a sığar.
             Integer.parseInt(trimmedID);
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Applicant ID must contain only digits");
         }
     }
 
+    /**
+     * İsim alanını doğrular (null, boş).
+     */
     private void validateName(String name) {
-        if (name == null) {
-            throw new IllegalArgumentException("Name cannot be null");
-        }
-
+        Objects.requireNonNull(name, "Name cannot be null");
         if (name.trim().isEmpty()) {
             throw new IllegalArgumentException("Name cannot be empty");
         }
     }
 
+    /**
+     * GPA alanını doğrular (aralık kontrolü).
+     */
     private void validateGpa(double gpa) {
-        if (Double.isNaN(gpa)) {
-            throw new IllegalArgumentException("GPA cannot be NaN");
-        }
-
-        if (Double.isInfinite(gpa)) {
-            throw new IllegalArgumentException("GPA cannot be Infinite");
-        }
-
         if (gpa < MIN_GPA || gpa > MAX_GPA) {
             throw new IllegalArgumentException(
-                    String.format("GPA must be between %.2f and %.2f (got: %.2f)",
+                    String.format("GPA must be between %.1f and %.1f (got: %.2f)",
                             MIN_GPA, MAX_GPA, gpa)
             );
         }
     }
 
+    /**
+     * Gelir alanını doğrular (negatif olamaz).
+     */
     private void validateIncome(double income) {
-        if (Double.isNaN(income)) {
-            throw new IllegalArgumentException("Income cannot be NaN");
-        }
-
-        if (Double.isInfinite(income)) {
-            throw new IllegalArgumentException("Income cannot be Infinite");
-        }
-
         if (income < MIN_INCOME) {
             throw new IllegalArgumentException(
                     String.format("Income cannot be negative (got: %.2f)", income)
@@ -106,7 +114,7 @@ public class Applicant {
         }
     }
 
-    // Getters
+    // --- Getters ---
 
     public String getApplicantID() {
         return applicantID;
@@ -124,10 +132,11 @@ public class Applicant {
         return income;
     }
 
-    // Setters
+    // --- Setters ---
+
     public void setName(String name) {
         validateName(name);
-        this.name = name.trim();  // Defensive: trim ile ekstra boşlukları temizle
+        this.name = name.trim();
     }
 
     public void setGpa(double gpa) {
@@ -140,126 +149,51 @@ public class Applicant {
         this.income = income;
     }
 
-    // Business Logic Methods
+    // --- GEREKLİ İŞ MANTIĞI ---
+
+    /**
+     * FileReaderService'in hangi burs objesini (Merit, Need, Research)
+     * yaratacağına karar vermesi için gereken kritik metot.
+     *
+     * @return ID'nin ilk iki hanesi ("11", "22", veya "33")
+     */
     public String getScholarshipTypeCode() {
-        if (applicantID != null && applicantID.length() >= 2) {
-            return applicantID.substring(0, 2);
-        }
-        return "";
+        // applicantID'nin null veya kısa olması constructor'da engellendi.
+        return applicantID.substring(0, 2);
     }
 
-    public boolean meetsMinimumGPA() {
-        return gpa >= MINIMUM_ELIGIBILITY_GPA;
-    }
+    // --- Object Metotları ---
 
-    public String getGpaCategory() {
-        if (gpa >= 3.50) {
-            return "Excellent";
-        } else if (gpa >= 3.00) {
-            return "Good";
-        } else if (gpa >= 2.50) {
-            return "Average";
-        } else {
-            return "Below Minimum";
-        }
-    }
-
-    public String getIncomeCategory() {
-        if (income <= 10000) {
-            return "Low";
-        } else if (income <= 15000) {
-            return "Medium";
-        } else {
-            return "High";
-        }
-    }
-
-    // Object Methods
-
+    /**
+     * Nesnenin String temsilini döndürür (hata ayıklama için).
+     */
     @Override
     public String toString() {
         return "Applicant{" +
                 "ID='" + applicantID + '\'' +
                 ", name='" + name + '\'' +
                 ", GPA=" + String.format("%.2f", gpa) +
-                ", incomeCategory='" + getIncomeCategory() + '\'' +
                 '}';
     }
 
-    public String toDetailedString() {
-        return "Applicant{" +
-                "ID='" + applicantID + '\'' +
-                ", name='" + name + '\'' +
-                ", GPA=" + String.format("%.2f", gpa) +
-                " (" + getGpaCategory() + ")" +
-                ", income=" + String.format("%.2f", income) +
-                " (" + getIncomeCategory() + ")" +
-                ", meetsMinGPA=" + meetsMinimumGPA() +
-                ", scholarshipType=" + getScholarshipTypeCode() +
-                '}';
-    }
-
+    /**
+     * İki başvuranı ID'lerine göre karşılaştırır.
+     * Sadece ID'ye bakmak yeterlidir.
+     */
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-
-        if (obj == null) {
-            return false;
-        }
-
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-
-        Applicant other = (Applicant) obj;
-        return applicantID.equals(other.applicantID);
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Applicant applicant = (Applicant) obj;
+        // ID'ler unique (benzersiz) olduğu için sadece ID'yi kontrol et
+        return applicantID.equals(applicant.applicantID);
     }
 
+    /**
+     * equals() ile tutarlı hashCode üretir.
+     */
     @Override
     public int hashCode() {
-        return applicantID.hashCode();
-    }
-
-    @Override
-    public Applicant clone() {
-        return new Applicant(this);
-    }
-
-    // Utility Methods
-
-    public boolean isDifferentFrom(Applicant other) {
-        return !this.equals(other);
-    }
-
-    public double getGpaAsPercentage() {
-        return (gpa / 4.0) * 100.0;
-    }
-
-    public boolean isValid() {
-        try {
-            validateApplicantID(applicantID);
-            validateName(name);
-            validateGpa(gpa);
-            validateIncome(income);
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-    }
-
-    public int compareByGpa(Applicant other) {
-        if (other == null) {
-            throw new IllegalArgumentException("Cannot compare with null Applicant");
-        }
-        return Double.compare(this.gpa, other.gpa);
-    }
-
-    public int compareByIncome(Applicant other) {
-        if (other == null) {
-            throw new IllegalArgumentException("Cannot compare with null Applicant");
-        }
-        return Double.compare(this.income, other.income);
+        return Objects.hash(applicantID);
     }
 }

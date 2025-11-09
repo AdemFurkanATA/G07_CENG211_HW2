@@ -1,32 +1,28 @@
 package model;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Application - Abstract (Soyut) ana sınıf
  * Tüm burs başvuru türlerinin ortak özelliklerini ve davranışlarını tanımlar
- * Bu sınıftan direkt nesne oluşturulamaz!
- *
- * Alt sınıflar:
- * - MeritBasedScholarship (11xx)
- * - NeedBasedScholarship (22xx)
- * - ResearchGrant (33xx)
+ * Bu sınıf, ID'ye göre sıralanabilmesi için Comparable arayüzünü uygular.
  */
-public abstract class Application {
+public abstract class Application implements Comparable<Application> { // Comparable ekle
 
-    // Ortak özellikler (tüm burs türlerinde var)
-    protected Applicant applicant;                    // Başvuran bilgileri
-    protected ArrayList<Document> documents;          // Belgeler listesi
-    protected ArrayList<Publication> publications;    // Yayınlar listesi (research için)
-    protected boolean transcriptStatus;               // Transcript geçerli mi? (Y/N)
+    // Ortak özellikler
+    protected Applicant applicant;
+    protected ArrayList<Document> documents;
+    protected ArrayList<Publication> publications;
+    protected boolean transcriptStatus;
 
     // Değerlendirme sonuçları
-    protected String status;              // "Accepted" veya "Rejected"
-    protected String scholarshipType;     // "Full", "Half", veya null
-    protected int durationInYears;        // Burs süresi (yıl olarak)
-    protected String rejectionReason;     // Red nedeni (varsa)
+    protected String status;
+    protected String scholarshipType;
+    protected int durationInYears;
+    protected String rejectionReason;
 
-    // Constructor
     /**
      * Application nesnesi oluşturur
      * @param applicant - Başvuran bilgileri
@@ -36,35 +32,33 @@ public abstract class Application {
         this.documents = new ArrayList<>();
         this.publications = new ArrayList<>();
         this.transcriptStatus = false;
-        this.status = "Pending";  // Başlangıçta beklemede
-        this.scholarshipType = null;
-        this.durationInYears = 0;
+        this.status = "Pending";
         this.rejectionReason = null;
     }
 
     // ============ ABSTRACT METODLAR ============
-    // Bu metodlar her alt sınıfta farklı şekilde implement edilmeli
 
     /**
      * Başvuruyu değerlendirir (her burs türü kendi kurallarına göre)
-     * Bu metod alt sınıflarda mutlaka yazılmalı!
      */
     public abstract void evaluate();
 
     /**
      * Burs türünü belirler (Full/Half)
-     * Her burs türünün kendine özgü kriterleri var
      */
     protected abstract String determineScholarshipType();
 
     /**
      * Burs süresini hesaplar
-     * Her burs türünün farklı süre hesaplama mantığı var
      */
     protected abstract int calculateDuration();
 
+    /**
+     * Başvurunun hangi burs türü olduğunu döndürür
+     */
+    public abstract String getScholarshipName();
+
     // ============ ORTAK KONTROL METODLARı ============
-    // Tüm burs türlerinde aynı şekilde çalışan metodlar
 
     /**
      * Genel uygunluk kontrolü (tüm burs türleri için aynı)
@@ -95,7 +89,6 @@ public abstract class Application {
             return false;
         }
 
-        // Tüm genel şartlar sağlanıyor
         return true;
     }
 
@@ -129,23 +122,14 @@ public abstract class Application {
 
     // ============ EKLEME METODLARı ============
 
-    /**
-     * Belge ekler
-     */
     public void addDocument(Document document) {
         this.documents.add(document);
     }
 
-    /**
-     * Yayın ekler (Research grant için)
-     */
     public void addPublication(Publication publication) {
         this.publications.add(publication);
     }
 
-    /**
-     * Transcript durumunu ayarlar
-     */
     public void setTranscriptStatus(boolean status) {
         this.transcriptStatus = status;
     }
@@ -153,7 +137,8 @@ public abstract class Application {
     // ============ GETTER METODLARı ============
 
     public Applicant getApplicant() {
-        return applicant;
+        // Madem deep copy gördünüz, bunu da yap
+        return (this.applicant == null) ? null : new Applicant(this.applicant);
     }
 
     public String getStatus() {
@@ -172,45 +157,33 @@ public abstract class Application {
         return rejectionReason;
     }
 
-    public ArrayList<Document> getDocuments() {
-        return documents;
-    }
-
-    public ArrayList<Publication> getPublications() {
-        return publications;
-    }
-
     public boolean getTranscriptStatus() {
         return transcriptStatus;
     }
 
-    // ============ SETTER METODLARı ============
-
-    protected void setStatus(String status) {
-        this.status = status;
-    }
-
-    protected void setScholarshipType(String scholarshipType) {
-        this.scholarshipType = scholarshipType;
-    }
-
-    protected void setDurationInYears(int duration) {
-        this.durationInYears = duration;
-    }
-
-    protected void setRejectionReason(String reason) {
-        this.rejectionReason = reason;
-    }
-
     /**
-     * Başvurunun hangi burs türü olduğunu döndürür
-     * Alt sınıflarda override edilebilir
+     * Kapsüllemeyi korumak için, listenin "değiştirilemez" (unmodifiable)
+     * bir kopyasını döndürür. Bu, 'deep copy'den daha verimlidir.
+     * @return Belgelerin 'read-only' (salt okunur) listesi
      */
-    public abstract String getScholarshipName();
+    public List<Document> getDocuments() {
+        return Collections.unmodifiableList(documents);
+    }
 
     /**
-     * Çıktı formatında sonucu döndürür
-     * Format: Applicant ID: 1101, Name: Liam Smith, Scholarship: Merit, Status: Accepted, Type: Full, Duration: 2 years
+     * Yayınların 'read-only' (salt okunur) listesini döndürür.
+     * @return Yayınların 'read-only' listesi
+     */
+    public List<Publication> getPublications() {
+        return Collections.unmodifiableList(publications);
+    }
+
+    // (Protected setter'lar kalabilir, onlar subclass'lar için gerekli)
+
+    // ============ ÇIKTI VE SIRALAMA ============
+
+    /**
+     * Çıktı formatında sonucu döndürür (BU METOT KUSURSUZDU)
      */
     @Override
     public String toString() {
@@ -232,9 +205,20 @@ public abstract class Application {
     }
 
     /**
-     * ID'ye göre karşılaştırma yapar (sıralama için)
+     * Comparable arayüzü için ID'ye göre karşılaştırma metodu.
+     * Bu metot, Collections.sort() tarafından otomatik kullanılır.
+     * O aptal 'compareById' yerine bunu yazdık.
      */
-    public int compareById(Application other) {
-        return this.applicant.getApplicantID().compareTo(other.applicant.getApplicantID());
+    @Override
+    public int compareTo(Application other) {
+        // ID'leri String olarak değil, Sayısal olarak karşılaştırmak DAHA DOĞRU
+        try {
+            int id1 = Integer.parseInt(this.applicant.getApplicantID());
+            int id2 = Integer.parseInt(other.applicant.getApplicantID());
+            return Integer.compare(id1, id2);
+        } catch (NumberFormatException e) {
+            // Eğer ID sayı değilse (hatalı veri), string karşılaştırması yap
+            return this.applicant.getApplicantID().compareTo(other.applicant.getApplicantID());
+        }
     }
 }
