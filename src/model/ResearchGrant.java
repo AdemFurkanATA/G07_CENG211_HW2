@@ -1,19 +1,5 @@
 package model;
 
-/**
- * ResearchGrant - Araştırma Bursu (33xx ID'ler)
- *
- * Değerlendirme Kriterleri:
- * - En az 1 Publication (P) veya Grant Proposal (GRP) gerekli
- * - Ortalama Impact Factor >= 1.50 → Full Scholarship (1 yıl)
- * - 1.00 <= Impact Factor < 1.50 → Half Scholarship (6 ay)
- * - Impact Factor < 1.00 → Rejected
- *
- * Süre:
- * - Full → 1 yıl base
- * - Half → 0.5 yıl (6 ay) base
- * - RSV (Research Supervisor Approval) varsa → +1 yıl eklenir
- */
 public class ResearchGrant extends Application {
 
     // Constructor
@@ -21,73 +7,76 @@ public class ResearchGrant extends Application {
         super(applicant);
     }
 
-    /**
-     * Araştırma bursu başvurusunu değerlendirir
-     */
+    //Evaluates research scholarship applications
     @Override
     public void evaluate() {
-        // 1. GENEL KONTROLLER (ENR, Transcript, GPA >= 2.50)
         if (!checkGeneralEligibility()) {
             return;
         }
 
-        // 2. YAYIN VEYA PROJE TEKLİFİ KONTROLÜ
-        // En az 1 yayın VEYA GRP belgesi olmalı
+        if (publications == null) {
+            this.status = "Rejected";
+            this.rejectionReason = "Publication data unavailable";
+            return;
+        }
+
+        if (applicant == null) {
+            this.status = "Rejected";
+            this.rejectionReason = "Applicant information missing";
+            return;
+        }
+
         if (publications.isEmpty() && !hasDocument("GRP")) {
             this.status = "Rejected";
             this.rejectionReason = "Missing publication or proposal";
             return;
         }
 
-        // 3. ORTALAMA IMPACT FACTOR HESAPLA
+
+        // Calculate average Impact Factor
         double avgImpact = calculateAverageImpact();
 
-        // 4. IMPACT FACTOR KONTROLÜ
-        // Impact factor < 1.00 ise red
+        // Impact Factor control
         if (avgImpact < 1.00) {
             this.status = "Rejected";
             this.rejectionReason = "Publication impact too low";
             return;
         }
 
-        // 5. BAŞVURU KABUL EDİLDİ
         this.status = "Accepted";
 
-        // 6. BURS TÜRÜNÜ BELİRLE (Full/Half)
+        // Determine Scholarship Type (Full/Half)
         this.scholarshipType = determineScholarshipType();
 
-        // 7. SÜREYİ HESAPLA
+        // Calculate Duration
         this.durationInYears = calculateDuration();
     }
 
     /**
-     * Ortalama impact factor'ü hesaplar
+     * Calculates average Impact Factor
+     * If there is no publication but there is GRP, the Impact Factor is considered 0
      *
-     * Eğer yayın yoksa ama GRP varsa, impact factor 0 kabul edilir
-     * (Bu durumda zaten "Publication impact too low" ile red olur)
-     *
-     * @return Ortalama impact factor
+     * @return Average Impact Factor
      */
     private double calculateAverageImpact() {
-        // Eğer hiç yayın yoksa 0 döndür
-        if (publications.isEmpty()) {
+        // If there are no publication returns 0
+        if (publications == null || publications.isEmpty()) {
             return 0.0;
         }
 
-        // Tüm yayınların impact factor'lerini topla
+        // Add Impact Factors of all publications
         double totalImpact = 0.0;
         for (Publication pub : publications) {
-            totalImpact += pub.getImpactFactor();
+            if (pub != null) {
+                totalImpact += pub.getImpactFactor();
+            }
         }
 
-        // Ortalamayı hesapla
+        // Calculate average
         return totalImpact / publications.size();
     }
 
-    /**
-     * Impact factor'e göre burs türünü belirler
-     * @return "Full" veya "Half"
-     */
+    //Determines the type of scholarship according to Impact Factor
     @Override
     protected String determineScholarshipType() {
         double avgImpact = calculateAverageImpact();
@@ -97,73 +86,62 @@ public class ResearchGrant extends Application {
         } else if (avgImpact >= 1.00) {
             return "Half";
         }
-
-        return null;  // Bu duruma gelmemeli (evaluate'de kontrol edildi)
+        return null;  // Shouldn't happen to this state (checked in evaluate)
     }
 
     /**
-     * Burs süresini hesaplar
+     * Calculates the scholarship duration
      *
      * Base duration:
-     * - Full → 1 yıl
-     * - Half → 0.5 yıl (6 ay)
+     * - Full → 1 year
+     * - Half → 0.5 year (6 months)
      *
-     * RSV (Research Supervisor Approval) varsa:
-     * - +1 yıl eklenir
+     *If there is RSV (Research Supervisor Approval):
+     * Add +1 year
      *
-     * NOT: Sonuç tam sayı olarak döndürülür, bu yüzden:
-     * - Half + RSV yok → 0.5 yıl → 1 yıl olarak gösterilir (yuvarlanır)
-     * - Half + RSV var → 1.5 yıl → 2 yıl olarak gösterilir (yuvarlanır)
+     * NOTE: The result is returned as an integer, so:
+     * Half + RSV is displayed as no → 0.5 years → 1 year (rounded up)
+     * Half + RSV present → shown as 1.5 years → 2 years (rounded up)
      *
-     * @return Süre (yıl olarak, tam sayı)
+     * @return Duration (in years, integer)
      */
     @Override
     protected int calculateDuration() {
-        double baseDuration;
+        double baseDuration = 0.0;
 
-        // Base duration'ı belirle
-        if (scholarshipType.equals("Full")) {
-            baseDuration = 1.0;  // 1 yıl
-        } else {
-            baseDuration = 0.5;  // 6 ay = 0.5 yıl
+        // Determine Base Duration
+        if ("Full".equals(scholarshipType)) {
+            baseDuration = 1.0;
+        } else if ("Half".equals(scholarshipType)) {
+            baseDuration = 0.5;
         }
 
-        // RSV varsa +1 yıl ekle
+        // Add 1 more year if there is RSV
         if (hasDocument("RSV")) {
             baseDuration += 1.0;
         }
 
-        // Yuvarlayarak tam sayıya çevir
+        // Convert to integer by rounding
         // 0.5 → 1, 1.0 → 1, 1.5 → 2, 2.0 → 2
         return (int) Math.ceil(baseDuration);
     }
 
-    /**
-     * Burs adını döndürür
-     * @return "Research"
-     */
+    //Returns Scholarship name
     @Override
     public String getScholarshipName() {
         return "Research";
     }
 
-    /**
-     * Yayın sayısını döndürür (debug için)
-     */
+    //Returns publication count for debugging
     public int getPublicationCount() {
         return publications.size();
     }
 
-    /**
-     * Ortalama impact factor'ü döndürür (debug için)
-     */
+    //Returns average Impact Factor for debugging
     public double getAverageImpact() {
         return calculateAverageImpact();
     }
 
-    /**
-     * Debug için bilgi döndürür
-     */
     @Override
     public String toString() {
         return super.toString();
