@@ -1,31 +1,13 @@
 package model;
 
-/**
- * Publication - Yayın bilgilerini tutar
- * CSV'deki "P" ile başlayan satırlardan oluşturulur
- * Format: P, applicantID, title, impactFactor
- *
- * Impact Factor:
- * - Yayının bilimsel etkisini gösteren sayısal değer
- * - Research Grant değerlendirmesinde kullanılır
- * - >= 1.50 → Full Scholarship
- * - >= 1.00 → Half Scholarship
- * - < 1.00 → Rejected
- */
 public class Publication {
 
     // Fields
-    private String applicantID;       // Yayının ait olduğu başvuran
-    private String title;             // Yayın başlığı
-    private double impactFactor;      // Etki faktörü (impact factor)
+    private String applicantID;
+    private String title;
+    private double impactFactor;
 
-    // Constructor
-    /**
-     * Publication nesnesi oluşturur
-     * @param applicantID - Başvuran ID'si
-     * @param title - Yayın başlığı
-     * @param impactFactor - Etki faktörü
-     */
+    // Creates Publication object
     public Publication(String applicantID, String title, double impactFactor) {
         this.applicantID = applicantID;
         this.title = title;
@@ -55,7 +37,7 @@ public class Publication {
         return impactFactor;
     }
 
-    // Setters (gerekirse)
+    // Setters
     public void setApplicantID(String applicantID) {
         this.applicantID = applicantID;
     }
@@ -68,10 +50,7 @@ public class Publication {
         this.impactFactor = impactFactor;
     }
 
-    /**
-     * Yayının kalitesini kategorize eder
-     * @return "High Impact" (>=1.50), "Medium Impact" (>=1.00), veya "Low Impact" (<1.00)
-     */
+    // Returns Impact Category based on Impact Factor
     public String getImpactCategory() {
         if (impactFactor >= 1.50) {
             return "High Impact";
@@ -82,33 +61,21 @@ public class Publication {
         }
     }
 
-    /**
-     * Yayının Full Scholarship için yeterli olup olmadığını kontrol eder
-     * @return true ise impact factor >= 1.50
-     */
+    // Checks if publication is qualified for full scholarship
     public boolean qualifiesForFullScholarship() {
         return impactFactor >= 1.50;
     }
 
-    /**
-     * Yayının Half Scholarship için yeterli olup olmadığını kontrol eder
-     * @return true ise impact factor >= 1.00
-     */
+    // Checks if publication is qualified for half scholarship
     public boolean qualifiesForHalfScholarship() {
         return impactFactor >= 1.00;
     }
 
-    /**
-     * Yayının kabul edilebilir olup olmadığını kontrol eder
-     * @return true ise impact factor >= 1.00
-     */
+    // Checks if publication is acceptable
     public boolean isAcceptable() {
         return impactFactor >= 1.00;
     }
 
-    /**
-     * Debug için bilgi döndürür
-     */
     @Override
     public String toString() {
         return "Publication{" +
@@ -119,31 +86,25 @@ public class Publication {
                 '}';
     }
 
-    /**
-     * İki yayını karşılaştırır
-     */
+    // Compares 2 publication based on Applicant ID and Title
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
-        Publication that = (Publication) obj;
+    public boolean equals(Object object) {
+        if (this == object) return true;
+
+        if (object == null || getClass() != object.getClass()) return false;
+
+        Publication that = (Publication) object;
         return applicantID.equals(that.applicantID) &&
                 title.equals(that.title);
     }
 
-    /**
-     * Hash code oluşturur
-     */
+    // Creates Hash code
     @Override
     public int hashCode() {
         return applicantID.hashCode() + title.hashCode();
     }
 
-    /**
-     * Impact factor'e göre yayınları karşılaştırır (sıralama için)
-     * @param other - Karşılaştırılacak yayın
-     * @return Negatif ise bu yayın daha düşük, pozitif ise daha yüksek impact'e sahip
-     */
+    // Compares 2 publication based on Impact Factor
     public int compareByImpact(Publication other) {
         return Double.compare(this.impactFactor, other.impactFactor);
     }
