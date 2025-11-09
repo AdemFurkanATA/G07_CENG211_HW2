@@ -15,7 +15,7 @@ public class Main {
     private static final String CSV_FILE_PATH = "Files/ScholarshipApplications.csv";
 
     // Debug modu, ek çıktıların (istatistikler vb.) gösterilip gösterilmeyeceğini belirler.
-    private static final boolean DEBUG_MODE = true;
+    private static final boolean DEBUG_MODE = false;
 
     /**
      * Programın ana giriş noktası.
