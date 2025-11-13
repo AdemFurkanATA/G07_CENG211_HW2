@@ -11,7 +11,7 @@ public class Main {
 
     public static void main(String[] args) {
         try {
-            // 1. Dosya Okuma
+            // Reading files
             FileReaderService fileReader = new FileReaderService();
             List<Application> applications = fileReader.readAndParseApplications(CSV_FILE_PATH);
 
@@ -20,14 +20,14 @@ public class Main {
                 return;
             }
 
-            // 2. Değerlendirme
+            // Evaluation
             EvaluationService evaluator = new EvaluationService();
             evaluator.evaluateAll(applications);
 
-            // 3. Sıralama
+            // Sorting
             evaluator.sortByApplicantID(applications);
 
-            // 4. Sonuç Yazdırma
+            // Print results
             System.out.println();
             System.out.println(evaluator.getResultsAsString(applications));
 

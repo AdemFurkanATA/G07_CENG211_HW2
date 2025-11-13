@@ -1,7 +1,5 @@
 package model;
 
-import java.util.Objects;
-
 public final class MeritBasedScholarship extends Application {
 
     private static final double FULL_SCHOLARSHIP_GPA_THRESHOLD = 3.20;

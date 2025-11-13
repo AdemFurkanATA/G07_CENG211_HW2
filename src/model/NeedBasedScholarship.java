@@ -2,11 +2,10 @@ package model;
 
 public class NeedBasedScholarship extends Application {
 
-    // Özel alanlar
     private double familyIncome;
     private int dependents;
 
-    // Gelir eşikleri (sabit referans değerler)
+    // Income thresholds (fixed reference values)
     private static final double BASE_FULL_THRESHOLD = 10000.0;
     private static final double BASE_HALF_THRESHOLD = 15000.0;
 
@@ -23,23 +22,22 @@ public class NeedBasedScholarship extends Application {
 
     @Override
     public void evaluate() {
-        // 1. Genel Kontroller
+        // General Controls
         if (!checkGeneralEligibility()) {
             return;
         }
 
-        // 2. Eşikleri Hesapla
-        // Her değerlendirmede temiz, sıfırdan hesaplama yapıyoruz.
+        // Calculate Thresholds
         double currentFullThreshold = BASE_FULL_THRESHOLD;
         double currentHalfThreshold = BASE_HALF_THRESHOLD;
 
         double adjustment = 1.0;
 
-        // SAV belgesi varsa %20 artış
+        // 20% increase if you have a SAV document
         if (hasDocument("SAV")) {
             adjustment += 0.20;
         }
-        // 3+ bakmakla yükümlü varsa %10 artış
+        // 10% increase if there are 3+ dependents
         if (dependents >= 3) {
             adjustment += 0.10;
         }
@@ -47,14 +45,14 @@ public class NeedBasedScholarship extends Application {
         currentFullThreshold *= adjustment;
         currentHalfThreshold *= adjustment;
 
-        // 3. Finansal Kontrol
+        // Financial Control
         if (familyIncome > currentHalfThreshold) {
             this.status = "Rejected";
             this.rejectionReason = "Financial status unstable";
             return;
         }
 
-        // 4. Kabul ve Tür Belirleme
+        // Acceptance and Type Determination
         this.status = "Accepted";
 
         if (familyIncome <= currentFullThreshold) {
@@ -63,7 +61,7 @@ public class NeedBasedScholarship extends Application {
             this.scholarshipType = "Half";
         }
 
-        // 5. Süre (Need-based için her zaman 1 yıl)
+        // Duration (always 1 year for need-based)
         this.durationInYears = calculateDuration();
     }
 
@@ -82,7 +80,7 @@ public class NeedBasedScholarship extends Application {
         return "Need-Based";
     }
 
-    // Getter metodları
+    // Getters
     public double getFamilyIncome() { return familyIncome; }
     public int getDependents() { return dependents; }
 }
