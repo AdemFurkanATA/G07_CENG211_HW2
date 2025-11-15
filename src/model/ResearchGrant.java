@@ -10,23 +10,32 @@ public class ResearchGrant extends Application {
     public void evaluate() {
         if (!checkGeneralEligibility()) return;
 
-        if (publications == null || (publications.isEmpty() && !hasDocument("GRP"))) {
-            this.status = "Rejected";
-            this.rejectionReason = "Missing publication or proposal";
+        boolean hasPublications = publications != null && !publications.isEmpty();
+        boolean hasGrantProposal = hasDocument("GRP");
+
+        if (!hasPublications && !hasGrantProposal) {
+            setStatus(ApplicationStatus.REJECTED);
+            setRejectionReason("Missing publication or proposal");
             return;
         }
 
-        double avgImpact = calculateAverageImpact();
+        if (hasPublications) {
+            double avgImpact = calculateAverageImpact();
 
-        if (avgImpact < 1.00) {
-            this.status = "Rejected";
-            this.rejectionReason = "Publication impact too low";
-            return;
+            if (avgImpact < 1.00) {
+                setStatus(ApplicationStatus.REJECTED);
+                setRejectionReason("Publication impact too low");
+                return;
+            }
+
+            setScholarshipType(determineScholarshipType());
+        } else {
+            setScholarshipType(ScholarshipType.HALF);
         }
 
-        this.status = "Accepted";
-        this.scholarshipType = determineScholarshipType();
-        this.durationInYears = calculateDuration();
+        setStatus(ApplicationStatus.ACCEPTED);
+        setRejectionReason(null);
+        setDurationInYears(calculateDuration());
     }
 
     private double calculateAverageImpact() {
@@ -39,18 +48,18 @@ public class ResearchGrant extends Application {
     }
 
     @Override
-    protected String determineScholarshipType() {
+    protected ScholarshipType determineScholarshipType() {
         double avgImpact = calculateAverageImpact();
-        if (avgImpact >= 1.50) return "Full";
-        else if (avgImpact >= 1.00) return "Half";
+        if (avgImpact >= 1.50) return ScholarshipType.FULL;
+        else if (avgImpact >= 1.00) return ScholarshipType.HALF;
         return null;
     }
 
     @Override
-    protected int calculateDuration() {
-        double baseDuration = "Full".equals(scholarshipType) ? 1.0 : 0.5;
+    protected double calculateDuration() {
+        double baseDuration = scholarshipType == ScholarshipType.FULL ? 1.0 : 0.5;
         if (hasDocument("RSV")) baseDuration += 1.0;
-        return (int) Math.ceil(baseDuration);
+        return baseDuration;
     }
 
     @Override

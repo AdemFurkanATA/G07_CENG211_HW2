@@ -3,107 +3,61 @@ package model;
 import java.util.ArrayList;
 
 /**
- * Application - Abstract (Soyut) ana sınıf
- * Tüm burs başvuru türlerinin ortak özelliklerini ve davranışlarını tanımlar
- * Bu sınıftan direkt nesne oluşturulamaz!
- *
- * Alt sınıflar:
- * - MeritBasedScholarship (11xx)
- * - NeedBasedScholarship (22xx)
- * - ResearchGrant (33xx)
+ * Abstract base for every scholarship application. It keeps the shared data
+ * (applicant, documents, publications, evaluation results) and provides helper
+ * operations for subclasses. Concrete scholarship types must extend this class
+ * and implement their own evaluation logic.
  */
 public abstract class Application {
 
-    // Ortak özellikler (tüm burs türlerinde var)
-    protected Applicant applicant;                    // Başvuran bilgileri
-    protected ArrayList<Document> documents;          // Belgeler listesi
-    protected ArrayList<Publication> publications;    // Yayınlar listesi (research için)
-    protected boolean transcriptStatus;               // Transcript geçerli mi? (Y/N)
+    protected Applicant applicant;
+    protected ArrayList<Document> documents;
+    protected ArrayList<Publication> publications;
+    protected boolean transcriptStatus;
 
-    // Değerlendirme sonuçları
-    protected String status;              // "Accepted" veya "Rejected"
-    protected String scholarshipType;     // "Full", "Half", veya null
-    protected int durationInYears;        // Burs süresi (yıl olarak)
-    protected String rejectionReason;     // Red nedeni (varsa)
+    protected ApplicationStatus status;
+    protected ScholarshipType scholarshipType;
+    protected double durationInYears;
+    protected String rejectionReason;
 
-    // Constructor
-    /**
-     * Application nesnesi oluşturur
-     * @param applicant - Başvuran bilgileri
-     */
     public Application(Applicant applicant) {
         this.applicant = applicant;
         this.documents = new ArrayList<>();
         this.publications = new ArrayList<>();
         this.transcriptStatus = false;
-        this.status = "Pending";  // Başlangıçta beklemede
+        this.status = ApplicationStatus.PENDING;
         this.scholarshipType = null;
         this.durationInYears = 0;
         this.rejectionReason = null;
     }
 
-    // ============ ABSTRACT METODLAR ============
-    // Bu metodlar her alt sınıfta farklı şekilde implement edilmeli
-
-    /**
-     * Başvuruyu değerlendirir (her burs türü kendi kurallarına göre)
-     * Bu metod alt sınıflarda mutlaka yazılmalı!
-     */
     public abstract void evaluate();
 
-    /**
-     * Burs türünü belirler (Full/Half)
-     * Her burs türünün kendine özgü kriterleri var
-     */
-    protected abstract String determineScholarshipType();
+    protected abstract ScholarshipType determineScholarshipType();
 
-    /**
-     * Burs süresini hesaplar
-     * Her burs türünün farklı süre hesaplama mantığı var
-     */
-    protected abstract int calculateDuration();
+    protected abstract double calculateDuration();
 
-    // ============ ORTAK KONTROL METODLARı ============
-    // Tüm burs türlerinde aynı şekilde çalışan metodlar
-
-    /**
-     * Genel uygunluk kontrolü (tüm burs türleri için aynı)
-     * 1. ENR belgesi var mı?
-     * 2. Transcript geçerli mi?
-     * 3. GPA >= 2.50 mi?
-     * @return true ise genel şartlar sağlanıyor
-     */
     public boolean checkGeneralEligibility() {
-        // 1. Kayıt belgesi kontrolü (ENR)
         if (!hasDocument("ENR")) {
-            this.status = "Rejected";
-            this.rejectionReason = "Missing Enrollment Certificate";
+            setStatus(ApplicationStatus.REJECTED);
+            setRejectionReason("Missing Enrollment Certificate");
             return false;
         }
 
-        // 2. Transcript kontrolü
         if (!transcriptStatus) {
-            this.status = "Rejected";
-            this.rejectionReason = "Missing Transcript";
+            setStatus(ApplicationStatus.REJECTED);
+            setRejectionReason("Missing Transcript");
             return false;
         }
 
-        // 3. Minimum GPA kontrolü (2.50)
         if (applicant.getGpa() < 2.50) {
-            this.status = "Rejected";
-            this.rejectionReason = "GPA below 2.5";
+            setStatus(ApplicationStatus.REJECTED);
+            setRejectionReason("GPA below 2.5");
             return false;
         }
-
-        // Tüm genel şartlar sağlanıyor
         return true;
     }
 
-    /**
-     * Belirli bir belge türünün var olup olmadığını kontrol eder
-     * @param documentType - Belge kodu (ENR, REC, SAV, RSV, GRP)
-     * @return true ise belge mevcut
-     */
     public boolean hasDocument(String documentType) {
         for (Document doc : documents) {
             if (doc.getDocumentType().equals(documentType)) {
@@ -113,11 +67,6 @@ public abstract class Application {
         return false;
     }
 
-    /**
-     * Belirli bir belgeyi döndürür (varsa)
-     * @param documentType - Belge kodu
-     * @return Document nesnesi veya null
-     */
     public Document getDocument(String documentType) {
         for (Document doc : documents) {
             if (doc.getDocumentType().equals(documentType)) {
@@ -127,44 +76,31 @@ public abstract class Application {
         return null;
     }
 
-    // ============ EKLEME METODLARı ============
-
-    /**
-     * Belge ekler
-     */
     public void addDocument(Document document) {
-        this.documents.add(document);
+        documents.add(document);
     }
 
-    /**
-     * Yayın ekler (Research grant için)
-     */
     public void addPublication(Publication publication) {
-        this.publications.add(publication);
+        publications.add(publication);
     }
 
-    /**
-     * Transcript durumunu ayarlar
-     */
     public void setTranscriptStatus(boolean status) {
         this.transcriptStatus = status;
     }
-
-    // ============ GETTER METODLARı ============
 
     public Applicant getApplicant() {
         return applicant;
     }
 
-    public String getStatus() {
+    public ApplicationStatus getStatus() {
         return status;
     }
 
-    public String getScholarshipType() {
+    public ScholarshipType getScholarshipType() {
         return scholarshipType;
     }
 
-    public int getDurationInYears() {
+    public double getDurationInYears() {
         return durationInYears;
     }
 
@@ -184,17 +120,15 @@ public abstract class Application {
         return transcriptStatus;
     }
 
-    // ============ SETTER METODLARı ============
-
-    protected void setStatus(String status) {
+    protected void setStatus(ApplicationStatus status) {
         this.status = status;
     }
 
-    protected void setScholarshipType(String scholarshipType) {
+    protected void setScholarshipType(ScholarshipType scholarshipType) {
         this.scholarshipType = scholarshipType;
     }
 
-    protected void setDurationInYears(int duration) {
+    protected void setDurationInYears(double duration) {
         this.durationInYears = duration;
     }
 
@@ -202,16 +136,8 @@ public abstract class Application {
         this.rejectionReason = reason;
     }
 
-    /**
-     * Başvurunun hangi burs türü olduğunu döndürür
-     * Alt sınıflarda override edilebilir
-     */
     public abstract String getScholarshipName();
 
-    /**
-     * Çıktı formatında sonucu döndürür
-     * Format: Applicant ID: 1101, Name: Liam Smith, Scholarship: Merit, Status: Accepted, Type: Full, Duration: 2 years
-     */
     @Override
     public String toString() {
         StringBuilder result = new StringBuilder();
@@ -220,10 +146,16 @@ public abstract class Application {
         result.append(", Scholarship: ").append(getScholarshipName());
         result.append(", Status: ").append(status);
 
-        if (status.equals("Accepted")) {
+        if (status == ApplicationStatus.ACCEPTED) {
             result.append(", Type: ").append(scholarshipType);
-            result.append(", Duration: ").append(durationInYears);
-            result.append(durationInYears == 1 ? " year" : " years");
+            result.append(", Duration: ");
+            if (durationInYears == Math.floor(durationInYears)) {
+                int years = (int) durationInYears;
+                result.append(years);
+                result.append(years == 1 ? " year" : " years");
+            } else {
+                result.append(durationInYears).append(" years");
+            }
         } else {
             result.append(", Reason: ").append(rejectionReason);
         }
@@ -231,9 +163,6 @@ public abstract class Application {
         return result.toString();
     }
 
-    /**
-     * ID'ye göre karşılaştırma yapar (sıralama için)
-     */
     public int compareById(Application other) {
         return this.applicant.getApplicantID().compareTo(other.applicant.getApplicantID());
     }
