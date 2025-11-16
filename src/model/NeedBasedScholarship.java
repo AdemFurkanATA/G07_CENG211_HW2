@@ -4,8 +4,8 @@ public class NeedBasedScholarship extends Application {
 
     private double familyIncome;
     private int dependents;
-    private boolean familyInfoProvided;
 
+    // Income thresholds (fixed reference values)
     private static final double BASE_FULL_THRESHOLD = 10000.0;
     private static final double BASE_HALF_THRESHOLD = 15000.0;
 
@@ -13,67 +13,66 @@ public class NeedBasedScholarship extends Application {
         super(applicant);
         this.familyIncome = 0.0;
         this.dependents = 0;
-        this.familyInfoProvided = false;
     }
 
     public void setFamilyInfo(double familyIncome, int dependents) {
         this.familyIncome = familyIncome;
         this.dependents = dependents;
-        this.familyInfoProvided = true;
     }
 
     @Override
     public void evaluate() {
+        // General Controls
         if (!checkGeneralEligibility()) {
             return;
         }
 
-        if (!familyInfoProvided) {
-            setStatus(ApplicationStatus.REJECTED);
-            setRejectionReason("Missing mandatory document");
+        // Calculate Thresholds
+        double currentFullThreshold = BASE_FULL_THRESHOLD;
+        double currentHalfThreshold = BASE_HALF_THRESHOLD;
+
+        double adjustment = 1.0;
+
+        // 20% increase if you have a SAV document
+        if (hasDocument("SAV")) {
+            adjustment += 0.20;
+        }
+        // 10% increase if there are 3+ dependents
+        if (dependents >= 3) {
+            adjustment += 0.10;
+        }
+
+        currentFullThreshold *= adjustment;
+        currentHalfThreshold *= adjustment;
+
+        // Financial Control
+        if (familyIncome > currentHalfThreshold) {
+            this.status = "Rejected";
+            this.rejectionReason = "Financial status unstable";
             return;
         }
 
-        ScholarshipType type = determineScholarshipType();
-        if (type == null) {
-            setStatus(ApplicationStatus.REJECTED);
-            setRejectionReason("Financial status unstable");
-            return;
+        // Acceptance and Type Determination
+        this.status = "Accepted";
+
+        if (familyIncome <= currentFullThreshold) {
+            this.scholarshipType = "Full";
+        } else {
+            this.scholarshipType = "Half";
         }
 
-        setStatus(ApplicationStatus.ACCEPTED);
-        setRejectionReason(null);
-        setScholarshipType(type);
+        // Duration (always 1 year for need-based)
         this.durationInYears = calculateDuration();
     }
 
     @Override
-    protected ScholarshipType determineScholarshipType() {
-        double currentFullThreshold = BASE_FULL_THRESHOLD;
-        double currentHalfThreshold = BASE_HALF_THRESHOLD;
-
-        if (hasDocument("SAV")) {
-            currentFullThreshold *= 1.20;
-            currentHalfThreshold *= 1.20;
-        }
-        if (dependents >= 3) {
-            currentFullThreshold *= 1.10;
-            currentHalfThreshold *= 1.10;
-        }
-
-        if (familyIncome > currentHalfThreshold) {
-            return null;
-        }
-
-        if (familyIncome <= currentFullThreshold) {
-            return ScholarshipType.FULL;
-        }
-        return ScholarshipType.HALF;
+    protected String determineScholarshipType() {
+        return scholarshipType;
     }
 
     @Override
-    protected double calculateDuration() {
-        return 1.0;
+    protected int calculateDuration() {
+        return 1;
     }
 
     @Override
@@ -81,11 +80,7 @@ public class NeedBasedScholarship extends Application {
         return "Need-Based";
     }
 
-    public double getFamilyIncome() {
-        return familyIncome;
-    }
-
-    public int getDependents() {
-        return dependents;
-    }
+    // Getters
+    public double getFamilyIncome() { return familyIncome; }
+    public int getDependents() { return dependents; }
 }
