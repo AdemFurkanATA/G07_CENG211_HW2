@@ -1,6 +1,8 @@
 package model;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public abstract class Application {
 
@@ -18,6 +20,9 @@ public abstract class Application {
 
     // Constructor
     public Application(Applicant applicant) {
+        if (applicant == null) {
+            throw new IllegalArgumentException("Applicant cannot be null");
+        }
         this.applicant = applicant;
         this.documents = new ArrayList<>();
         this.publications = new ArrayList<>();
@@ -28,7 +33,7 @@ public abstract class Application {
         this.rejectionReason = null;
     }
 
-    // ============ ABSTRACT METHODS ============
+    // Abstract Methods
     public abstract void evaluate();
 
     // Determine scholarship type
@@ -60,8 +65,11 @@ public abstract class Application {
     }
 
     public boolean hasDocument(String documentType) {
+        if (documentType == null) {
+            return false;
+        }
         for (Document doc : documents) {
-            if (doc.getDocumentType().equals(documentType)) {
+            if (doc != null && documentType.equals(doc.getDocumentType())) {
                 return true;
             }
         }
@@ -69,8 +77,11 @@ public abstract class Application {
     }
 
     public Document getDocument(String documentType) {
+        if (documentType == null) {
+            return null;
+        }
         for (Document doc : documents) {
-            if (doc.getDocumentType().equals(documentType)) {
+            if (doc != null && documentType.equals(doc.getDocumentType())) {
                 return doc;
             }
         }
@@ -79,11 +90,17 @@ public abstract class Application {
 
     // Adds document
     public void addDocument(Document document) {
+        if (document == null) {
+            throw new IllegalArgumentException("Document cannot be null");
+        }
         this.documents.add(document);
     }
 
     // Adds publication for ResearchGrant
     public void addPublication(Publication publication) {
+        if (publication == null) {
+            throw new IllegalArgumentException("Publication cannot be null");
+        }
         this.publications.add(publication);
     }
 
@@ -92,7 +109,7 @@ public abstract class Application {
         this.transcriptStatus = status;
     }
 
-    // ============ GETTERS ============
+    // Getters
     public Applicant getApplicant() {
         return applicant;
     }
@@ -113,12 +130,12 @@ public abstract class Application {
         return rejectionReason;
     }
 
-    public ArrayList<Document> getDocuments() {
-        return documents;
+    public List<Document> getDocuments() {
+        return Collections.unmodifiableList(documents);
     }
 
-    public ArrayList<Publication> getPublications() {
-        return publications;
+    public List<Publication> getPublications() {
+        return Collections.unmodifiableList(publications);
     }
 
     public boolean getTranscriptStatus() {
@@ -135,11 +152,11 @@ public abstract class Application {
         result.append(", Scholarship: ").append(getScholarshipName());
         result.append(", Status: ").append(status);
 
-        if (status.equals("Accepted")) {
+        if ("Accepted".equals(status)) {
             result.append(", Type: ").append(scholarshipType);
             result.append(", Duration: ").append(durationInYears);
             result.append(durationInYears == 1 ? " year" : " years");
-        } else {
+        } else if (rejectionReason != null) {
             result.append(", Reason: ").append(rejectionReason);
         }
 
@@ -147,6 +164,9 @@ public abstract class Application {
     }
 
     public int compareById(Application other) {
+        if (other == null) {
+            throw new IllegalArgumentException("Cannot compare with null Application");
+        }
         return this.applicant.getApplicantID().compareTo(other.applicant.getApplicantID());
     }
 }

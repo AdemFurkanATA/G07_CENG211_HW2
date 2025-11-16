@@ -16,12 +16,25 @@ public class NeedBasedScholarship extends Application {
     }
 
     public void setFamilyInfo(double familyIncome, int dependents) {
+        if (familyIncome < 0) {
+            throw new IllegalArgumentException("Family income cannot be negative");
+        }
+        if (dependents < 0) {
+            throw new IllegalArgumentException("Number of dependents cannot be negative");
+        }
         this.familyIncome = familyIncome;
         this.dependents = dependents;
     }
 
     @Override
     public void evaluate() {
+        // Validate that family info has been set
+        if (familyIncome == 0.0 && dependents == 0) {
+            this.status = "Rejected";
+            this.rejectionReason = "Family information not provided";
+            return;
+        }
+
         // General Controls
         if (!checkGeneralEligibility()) {
             return;
@@ -48,7 +61,7 @@ public class NeedBasedScholarship extends Application {
         // Financial Control
         if (familyIncome > currentHalfThreshold) {
             this.status = "Rejected";
-            this.rejectionReason = "Financial status unstable";
+            this.rejectionReason = "Family income exceeds threshold";
             return;
         }
 
@@ -81,6 +94,11 @@ public class NeedBasedScholarship extends Application {
     }
 
     // Getters
-    public double getFamilyIncome() { return familyIncome; }
-    public int getDependents() { return dependents; }
+    public double getFamilyIncome() {
+        return familyIncome;
+    }
+
+    public int getDependents() {
+        return dependents;
+    }
 }
